@@ -1,0 +1,162 @@
+Option Explicit
+' Created by Todd Martin 10/4/2024
+' Objective is to get user input of Invoice ID searching for
+' Create an IF statement that will notify the user if Invoice is not found
+' Second create a loop to rotate trhough the dataset and find all invoices based
+' on the criteria set by the user then exctract all information associated witht the invoice
+
+Sub ExtractInvoiceData()
+    Dim wsSource As Worksheet
+    Dim wsDest As Worksheet
+    Dim wsCompleted As Worksheet
+    Dim sourceRow As Long, destRow As Long
+    Dim lastRow As Long
+    Dim searchInvoiceID As String
+    Dim found As Boolean
+    Dim totalOriginalAmount As Double
+    Dim totalAdjustedAmount As Double
+    Dim totalAmount As Double
+
+    ' Declare named constants for source column references
+    Const COL_INVOICE_ID As Long = 1 ' A
+    Const COL_LOAN_NUMBER As Long = 4 ' D
+    Const COL_INVOICE_NUMBER As Long = 5 ' E
+    Const COL_PAYEE_CODE As Long = 11 ' K
+    Const COL_INVOICE_TYPE As Long = 12 ' L
+    Const COL_ORIGINAL_AMOUNT As Long = 17 ' S
+    Const COL_ADJUSTED_AMOUNT As Long = 18 ' T
+    Const COL_AMOUNT As Long = 19 ' U
+
+    ' Declare named constants for destination column references
+    Const DEST_COL_INVOICE_ID As Long = 1 ' A
+    Const DEST_COL_LOAN_NUMBER As Long = 2 ' B
+    Const DEST_COL_INVOICE_NUMBER As Long = 3 ' C
+    Const DEST_COL_PAYEE_CODE As Long = 4 ' D
+    Const DEST_COL_INVOICE_TYPE As Long = 5 ' E
+    Const DEST_COL_ORIGINAL_AMOUNT As Long = 6 ' F
+    Const DEST_COL_ADJUSTED_AMOUNT As Long = 7 ' G
+    Const DEST_COL_AMOUNT As Long = 8 ' H
+
+
+    ' Set the worksheets
+    Set wsSource = ThisWorkbook.Sheets("InvoiceTable Testing Results")
+    Set wsDest = ThisWorkbook.Sheets("Extraction")
+    Set wsCompleted = ThisWorkbook.Sheets("Completed")
+
+    ' Call completed sub routine
+    Call MoveDataToCompleted
+
+    ' Clear previous data in the destination sheet
+    wsDest.Cells.Clear
+
+    ' Set header row in the destination sheet
+    wsDest.Range("A1").Value = "InvoiceID"
+    wsDest.Range("B1").Value = "LoanNumber"
+    wsDest.Range("C1").Value = "InvoiceNumber"
+    wsDest.Range("D1").Value = "PayeeCode"
+    wsDest.Range("E1").Value = "InvoiceType"
+    wsDest.Range("F1").Value = "OriginalAmount"
+    wsDest.Range("G1").Value = "AdjustedAmount"
+    wsDest.Range("H1").Value = "Amount"
+    
+    destRow = 2 ' Start writing to the destination sheet from row 2
+
+    ' Get the search InvoiceID from the user
+    searchInvoiceID = InputBox("Enter the InvoiceID to search for:")
+
+    ' Get the last row of the source table
+    lastRow = wsSource.Cells(wsSource.Rows.Count, "A").End(xlUp).row
+
+    ' Initialize totals and found flag
+    totalOriginalAmount = 0
+    totalAdjustedAmount = 0
+    totalAmount = 0
+    found = False
+
+    ' Loop through the source table to find matching InvoiceID
+    For sourceRow = 2 To lastRow
+        If wsSource.Cells(sourceRow, COL_INVOICE_ID).Value = searchInvoiceID Then
+            ' Highlight the row being extracted
+            wsSource.Rows(sourceRow).Interior.Color = RGB(255, 255, 0) ' Highlight in yellow
+
+            ' If a match is found, extract the required data
+            wsDest.Cells(destRow, DEST_COL_INVOICE_ID).Value = searchInvoiceID ' InvoiceID
+            wsDest.Cells(destRow, DEST_COL_LOAN_NUMBER).Value = wsSource.Cells(sourceRow, COL_LOAN_NUMBER).Value ' LoanNumber
+            wsDest.Cells(destRow, DEST_COL_INVOICE_NUMBER).Value = wsSource.Cells(sourceRow, COL_INVOICE_NUMBER).Value ' Invoice Number
+            wsDest.Cells(destRow, DEST_COL_PAYEE_CODE).Value = wsSource.Cells(sourceRow, COL_PAYEE_CODE).Value ' Payee Code
+            wsDest.Cells(destRow, DEST_COL_INVOICE_TYPE).Value = wsSource.Cells(sourceRow, COL_INVOICE_TYPE).Value ' Invoice Type
+            wsDest.Cells(destRow, DEST_COL_ORIGINAL_AMOUNT).Value = wsSource.Cells(sourceRow, COL_ORIGINAL_AMOUNT).Value ' Original Amount
+            wsDest.Cells(destRow, DEST_COL_ADJUSTED_AMOUNT).Value = wsSource.Cells(sourceRow, COL_ADJUSTED_AMOUNT).Value ' Adjusted Amount
+            wsDest.Cells(destRow, DEST_COL_AMOUNT).Value = wsSource.Cells(sourceRow, COL_AMOUNT).Value ' Amount
+     
+      
+            ' Accumulate totals
+            totalOriginalAmount = totalOriginalAmount + wsSource.Cells(sourceRow, COL_ORIGINAL_AMOUNT).Value
+            totalAdjustedAmount = totalAdjustedAmount + wsSource.Cells(sourceRow, COL_ADJUSTED_AMOUNT).Value
+            totalAmount = totalAmount + wsSource.Cells(sourceRow, COL_AMOUNT).Value
+
+            destRow = destRow + 1 ' Move to the next row in the destination sheet
+            found = True
+        End If
+    Next sourceRow
+
+    ' If matches were found, add totals
+    If found Then
+        wsDest.Cells(destRow, DEST_COL_INVOICE_TYPE).Value = "Total" ' Label for total
+        wsDest.Cells(destRow, DEST_COL_ORIGINAL_AMOUNT).Value = totalOriginalAmount ' Total for OriginalAmount
+        wsDest.Cells(destRow, DEST_COL_ADJUSTED_AMOUNT).Value = totalAdjustedAmount ' Total for AdjsutedAmount
+        wsDest.Cells(destRow, DEST_COL_AMOUNT).Value = totalAmount ' Total for Amount
+    End If
+
+    ' Notify if no matching InvoiceID was found
+    If Not found Then
+        MsgBox "No matching InvoiceID found."
+    Else
+        MsgBox "Data extraction completed! You can review the data."
+    End If
+End Sub
+
+    ' Create a Sub that will move the Extracted data to the completed tab when the review is finished
+    
+Sub MoveDataToCompleted()
+    Dim wsDest As Worksheet
+    Dim wsCompleted As Worksheet
+    Dim lastRowDest As Long
+    Dim lastRowCompleted As Long
+    Dim row As Long
+
+    ' Set the worksheets
+    Set wsDest = ThisWorkbook.Sheets("Extraction")
+    Set wsCompleted = ThisWorkbook.Sheets("Completed")
+
+    ' Find the last row of data in the Extraction sheet
+    lastRowDest = wsDest.Cells(wsDest.Rows.Count, "A").End(xlUp).row
+
+    ' Find the last row in the Completed sheet
+    lastRowCompleted = wsCompleted.Cells(wsCompleted.Rows.Count, "A").End(xlUp).row + 1 ' Start from next available row
+
+    ' Copy data from Extraction sheet to Completed sheet
+    For row = 2 To lastRowDest ' Assuming row 1 contains headers
+        wsCompleted.Cells(lastRowCompleted, 1).Value = wsDest.Cells(row, 1).Value ' InvoiceID
+        wsCompleted.Cells(lastRowCompleted, 2).Value = wsDest.Cells(row, 2).Value ' LoanNumber
+        wsCompleted.Cells(lastRowCompleted, 3).Value = wsDest.Cells(row, 3).Value ' InvoiceNumber
+        wsCompleted.Cells(lastRowCompleted, 4).Value = wsDest.Cells(row, 4).Value ' PayeeCode
+        wsCompleted.Cells(lastRowCompleted, 5).Value = wsDest.Cells(row, 5).Value ' InvoiceType
+        wsCompleted.Cells(lastRowCompleted, 6).Value = wsDest.Cells(row, 6).Value ' OriginalAmount
+        wsCompleted.Cells(lastRowCompleted, 7).Value = wsDest.Cells(row, 7).Value ' AdjustedAmount
+        wsCompleted.Cells(lastRowCompleted, 8).Value = wsDest.Cells(row, 8).Value ' Amount
+
+         
+        ' Add today's date in Column G
+        wsCompleted.Cells(lastRowCompleted, 9).Value = Date ' Column H with today's date
+
+        ' Move to the next row in the Completed sheet
+        lastRowCompleted = lastRowCompleted + 1
+    Next row
+
+    ' Clear the data in the Extraction sheet after moving to Completed
+    wsDest.Cells.Clear
+    MsgBox "Data has been moved to the Completed tab!"
+End Sub
+
+
